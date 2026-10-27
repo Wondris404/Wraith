@@ -5,6 +5,7 @@ import { AgentMarkdown } from "./AgentMarkdown";
 import {
   useAgent,
   type AgentMessage,
+  type AgentSettings,
 } from "./useAgent";
 import type { OrchestratorApi } from "./orchestratorTypes";
 import type { PaneInfo } from "./tools";
@@ -156,7 +157,7 @@ export function AgentPaneView({
     });
   }, []);
 
-  const requireOpenRouterSettings = useCallback((): AiSettings | null => {
+  const requireOpenRouterSettings = useCallback((): AgentSettings | null => {
     const settings = api.settings;
     const validationError = validateDictationSettings(settings);
     if (validationError) {

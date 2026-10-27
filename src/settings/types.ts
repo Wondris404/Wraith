@@ -21,13 +21,31 @@ export type DictationStyle = "clean" | "verbatim" | "command-safe";
 
 export type AiProvider = "openrouter" | "ollama";
 
+/** A pane-header button that types `command` into the terminal. */
+export interface AiShortcutConfig {
+  label: string;
+  command: string;
+  /** Short text shown when no built-in icon matches the label. */
+  badge: string;
+}
+
 export interface AiSettings {
   provider: AiProvider;
   model: string;
   baseUrl: string;
   apiKey: string;
   dictationStyle: DictationStyle;
+  shortcuts: AiShortcutConfig[];
 }
+
+export const DEFAULT_AI_SHORTCUTS: AiShortcutConfig[] = [
+  { label: "codex", command: "codex", badge: "" },
+  { label: "opencode", command: "opencode", badge: "" },
+  { label: "claude", command: "claude", badge: "" },
+  { label: "grok", command: "grok", badge: "G" },
+];
+
+export const MAX_AI_SHORTCUTS = 12;
 
 export type TerminalColorMode = "theme" | "custom";
 
@@ -136,6 +154,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     baseUrl: "https://openrouter.ai/api/v1",
     apiKey: "",
     dictationStyle: "clean",
+    shortcuts: DEFAULT_AI_SHORTCUTS.map((sc) => ({ ...sc })),
   },
   general: {
     confirmClosePane: true,
@@ -235,6 +254,22 @@ export function asHexColor(value: unknown, fallback: string): string {
   return trimmed.toLowerCase();
 }
 
+export function normalizeAiShortcuts(raw: unknown): AiShortcutConfig[] {
+  if (!Array.isArray(raw)) return DEFAULT_AI_SHORTCUTS.map((sc) => ({ ...sc }));
+  const result: AiShortcutConfig[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const entry = item as Record<string, unknown>;
+    const label = typeof entry.label === "string" ? entry.label.trim() : "";
+    const command = typeof entry.command === "string" ? entry.command.trim() : "";
+    if (!label || !command) continue;
+    const badge = typeof entry.badge === "string" ? entry.badge.trim().slice(0, 3) : "";
+    result.push({ label, command, badge });
+    if (result.length >= MAX_AI_SHORTCUTS) break;
+  }
+  return result;
+}
+
 function normalizeTerminalColors(
   raw: Record<string, unknown>,
   fallback: TerminalColors
@@ -306,6 +341,7 @@ export function normalizeAppSettings(raw: unknown): AppSettings {
       dictationStyle: isDictationStyle(ai.dictationStyle)
         ? ai.dictationStyle
         : d.ai.dictationStyle,
+      shortcuts: normalizeAiShortcuts(ai.shortcuts),
     },
     general: {
       confirmClosePane: asBool(

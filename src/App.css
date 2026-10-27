@@ -2544,3 +2544,16 @@ body,
 .term-container .xterm {
   padding: 2px;
 }
+
+.ai-shortcut-row {
+  flex-wrap: nowrap;
+  margin-bottom: 6px;
+}
+
+.ai-shortcut-row .agent-modal-input {
+  min-width: 0;
+}
+
+.ai-shortcut-badge-input {
+  max-width: 64px;
+}

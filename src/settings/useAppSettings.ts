@@ -28,7 +28,10 @@ function toPersistedPayload(settings: AppSettings): AppSettings {
     version: 1,
     appearance: { ...settings.appearance },
     terminal: { ...settings.terminal },
-    ai: { ...settings.ai },
+    ai: {
+      ...settings.ai,
+      shortcuts: settings.ai.shortcuts.map((sc) => ({ ...sc })),
+    },
     general: {
       confirmClosePane: settings.general.confirmClosePane,
       confirmCloseSession: settings.general.confirmCloseSession,
@@ -268,7 +271,7 @@ export function useAppSettings() {
     async (ai: AiSettings) => {
       const next: AppSettings = {
         ...settingsRef.current,
-        ai: { ...ai },
+        ai: { ...ai, shortcuts: ai.shortcuts.map((sc) => ({ ...sc })) },
       };
       settingsRef.current = next;
       setSettings(next);

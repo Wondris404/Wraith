@@ -37,6 +37,7 @@ import {
   SIDEBAR_COLLAPSE_THRESHOLD,
   useAppSettings,
   type AiSettings,
+  type AiShortcutConfig,
 } from "./settings";
 import {
   errorMessage,
@@ -57,12 +58,21 @@ interface AiShortcut {
   badge?: string;
 }
 
-const AI_SHORTCUTS: AiShortcut[] = [
-  { label: "codex", command: "codex", icon: openaiIcon },
-  { label: "opencode", command: "opencode", icon: opencodeIcon },
-  { label: "claude", command: "claude", icon: claudeIcon },
-  { label: "grok", command: "grok", badge: "G" },
-];
+const AI_SHORTCUT_ICONS: Record<string, string> = {
+  codex: openaiIcon,
+  opencode: opencodeIcon,
+  claude: claudeIcon,
+};
+
+function toAiShortcut(config: AiShortcutConfig): AiShortcut {
+  const icon = config.badge ? undefined : AI_SHORTCUT_ICONS[config.label.toLowerCase()];
+  return {
+    label: config.label,
+    command: config.command,
+    icon,
+    badge: config.badge || config.label.slice(0, 1).toUpperCase(),
+  };
+}
 
 interface PtyOutputPayload {
   id: string;
@@ -269,8 +279,12 @@ const createAgentRunToken = () => createAgentRunTokenShared(() => {
 const buildAgentCommand = buildAgentCommandShared;
 const splitAgentCompletionMarkers = splitAgentCompletionMarkersShared;
 
-function buildAgentLaunchCommand(agent: PaneAgentName, task: string): string {
-  const shortcut = AI_SHORTCUTS.find((s) => s.label === agent);
+function buildAgentLaunchCommand(
+  agent: PaneAgentName,
+  task: string,
+  shortcuts: AiShortcutConfig[]
+): string {
+  const shortcut = shortcuts.find((s) => s.label === agent);
   const base = shortcut?.command ?? agent;
   const trimmed = task.trim();
   if (!trimmed) return base;
@@ -1276,7 +1290,7 @@ function TiledNode({
                 {paneDictation?.status === "recording" ? "■" : "🎙"}
               </span>
             </button>
-            {AI_SHORTCUTS.map((sc) => (
+            {aiSettings.shortcuts.map(toAiShortcut).map((sc) => (
               <button
                 key={sc.label}
                 className="pane-ai-btn"
@@ -2472,7 +2486,11 @@ function App() {
         agentHookUrlRef.current = hookUrl;
 
         const token = createAgentRunToken();
-        const command = buildAgentLaunchCommand(agent, task);
+        const command = buildAgentLaunchCommand(
+          agent,
+          task,
+          settingsRef.current.ai.shortcuts
+        );
         const input = buildAgentCommand(command, token, hookUrl, agent);
         agentRunsRef.current.set(win.id, {
           token,

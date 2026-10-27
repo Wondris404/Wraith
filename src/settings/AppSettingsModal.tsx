@@ -2,10 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import type { AppSettingsApi } from "./useAppSettings";
 import {
   AI_PROVIDER_PRESETS,
+  DEFAULT_AI_SHORTCUTS,
   DEFAULT_FONT_SIZE,
+  MAX_AI_SHORTCUTS,
   MAX_FONT_SIZE,
   MIN_FONT_SIZE,
+  normalizeAiShortcuts,
   type AiProvider,
+  type AiShortcutConfig,
   type AiSettings,
   type DictationStyle,
   type SettingsTab,
@@ -39,6 +43,9 @@ export function AppSettingsModal({ api }: AppSettingsModalProps) {
   const [dictationStyle, setDictationStyle] = useState<DictationStyle>(
     settings.ai.dictationStyle
   );
+  const [shortcuts, setShortcuts] = useState<AiShortcutConfig[]>(
+    settings.ai.shortcuts
+  );
   const [confirmClosePane, setConfirmClosePane] = useState(
     settings.general.confirmClosePane
   );
@@ -54,6 +61,7 @@ export function AppSettingsModal({ api }: AppSettingsModalProps) {
     setBaseUrl(settings.ai.baseUrl);
     setApiKey(settings.ai.apiKey);
     setDictationStyle(settings.ai.dictationStyle);
+    setShortcuts(settings.ai.shortcuts);
     setConfirmClosePane(settings.general.confirmClosePane);
     setConfirmCloseSession(settings.general.confirmCloseSession);
   }, [settings]);
@@ -98,11 +106,22 @@ export function AppSettingsModal({ api }: AppSettingsModalProps) {
         baseUrl,
         apiKey,
         dictationStyle,
+        shortcuts: normalizeAiShortcuts(shortcuts),
       };
       await api.setAiSettings(next);
     } finally {
       setSavingAi(false);
     }
+  };
+
+  const updateShortcut = (
+    index: number,
+    key: keyof AiShortcutConfig,
+    value: string
+  ) => {
+    setShortcuts((prev) =>
+      prev.map((sc, i) => (i === index ? { ...sc, [key]: value } : sc))
+    );
   };
 
   const onSaveGeneral = async (e: React.FormEvent) => {
@@ -371,7 +390,7 @@ export function AppSettingsModal({ api }: AppSettingsModalProps) {
             {settingsTab === "ai" && (
               <form className="settings-section" onSubmit={onSaveAi}>
                 <p className="settings-section-hint">
-                  Provider and API key for the in-app agent and dictation. Save to persist.
+                  Provider and API key for the in-app agent and dictation, plus pane AI buttons. Save to persist.
                 </p>
                 <div className="agent-modal-row">
                   <label className="agent-modal-label">Provider</label>
@@ -480,6 +499,77 @@ export function AppSettingsModal({ api }: AppSettingsModalProps) {
                       />
                       <span>Verbatim</span>
                     </label>
+                  </div>
+                </div>
+
+                <div className="agent-modal-row">
+                  <label className="agent-modal-label">Pane AI buttons</label>
+                  <p className="settings-section-hint">
+                    Buttons in each pane header. Command is typed into the terminal;
+                    badge (up to 3 chars) is shown when the label has no built-in icon.
+                  </p>
+                  {shortcuts.map((sc, index) => (
+                    <div key={index} className="agent-modal-radio-row ai-shortcut-row">
+                      <input
+                        className="agent-modal-input"
+                        value={sc.label}
+                        onChange={(e) => updateShortcut(index, "label", e.target.value)}
+                        placeholder="Label"
+                        aria-label="Button label"
+                        spellCheck={false}
+                      />
+                      <input
+                        className="agent-modal-input"
+                        value={sc.command}
+                        onChange={(e) => updateShortcut(index, "command", e.target.value)}
+                        placeholder="Command"
+                        aria-label="Command"
+                        spellCheck={false}
+                      />
+                      <input
+                        className="agent-modal-input ai-shortcut-badge-input"
+                        value={sc.badge}
+                        maxLength={3}
+                        onChange={(e) => updateShortcut(index, "badge", e.target.value)}
+                        placeholder="Badge"
+                        aria-label="Badge"
+                        spellCheck={false}
+                      />
+                      <button
+                        type="button"
+                        className="agent-modal-cancel"
+                        title="Remove button"
+                        onClick={() =>
+                          setShortcuts((prev) => prev.filter((_, i) => i !== index))
+                        }
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                  <div className="agent-modal-radio-row">
+                    <button
+                      type="button"
+                      className="agent-modal-cancel"
+                      disabled={shortcuts.length >= MAX_AI_SHORTCUTS}
+                      onClick={() =>
+                        setShortcuts((prev) => [
+                          ...prev,
+                          { label: "", command: "", badge: "" },
+                        ])
+                      }
+                    >
+                      Add button
+                    </button>
+                    <button
+                      type="button"
+                      className="agent-modal-cancel"
+                      onClick={() =>
+                        setShortcuts(DEFAULT_AI_SHORTCUTS.map((sc) => ({ ...sc })))
+                      }
+                    >
+                      Reset to defaults
+                    </button>
                   </div>
                 </div>
 
